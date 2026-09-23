@@ -9,7 +9,7 @@ and verifies the answer before displaying it. It never changes access.
 Requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/jose1uis/RevIAsor-_.git
+git clone https://github.com/jose1uis/RevAIsor-_.git
 cd RevIAsor-_
 python -m venv .venv
 ```
