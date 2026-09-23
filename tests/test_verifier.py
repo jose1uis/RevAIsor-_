@@ -56,6 +56,21 @@ class VerifierTests(unittest.TestCase):
     def test_role_ids_in_brackets_are_checked(self):
         self.assertFailedCheck(self.verify("Priya owns [GBR-8888]. [Role-DB]"), "no_invented_roles")
 
+    def test_known_role_in_brackets_is_not_a_citation(self):
+        result = self.verify("Priya owns [GBR-1234]. [Role-DB]")
+        self.assertEqual(result["status"], "SUCCESS")
+
+    def test_bracketed_role_still_requires_a_source_citation(self):
+        self.assertFailedCheck(self.verify("Priya owns [GBR-1234]."), "citation_present")
+
+    def test_bracketed_role_does_not_hide_an_unknown_citation(self):
+        result = self.verify("Priya owns [GBR-1234]. [Role-DB, Unknown-Source]")
+        self.assertFailedCheck(result, "citations_retrieved")
+
+    def test_known_bracketed_role_still_requires_retrieved_evidence(self):
+        result = self.verify("Priya owns [ZGBR-5678]. [Role-DB]")
+        self.assertFailedCheck(result, "roles_in_retrieved_evidence")
+
     def test_known_but_unrelated_role_fails(self):
         result = self.verify("Priya owns ZGBR-5678. [Role-DB]")
         self.assertFailedCheck(result, "roles_in_retrieved_evidence")
@@ -64,6 +79,35 @@ class VerifierTests(unittest.TestCase):
         evidence = {"role_tool": [role_tool("Priya"), role_tool("Carlos")]}
         result = self.verify("Priya owns ZGBR-5678. Carlos owns GBR-1234. [Role-DB]", evidence)
         self.assertFailedCheck(result, "ownership_matches")
+
+    def test_inline_markdown_does_not_hide_swapped_owners(self):
+        evidence = {"role_tool": [role_tool("Priya"), role_tool("Carlos")]}
+        for marker in ["*", "**", "***", "_", "__", "`", "``"]:
+            with self.subTest(marker=marker):
+                result = self.verify(
+                    f"{marker}Priya{marker} owns {marker}ZGBR-5678{marker}. "
+                    f"{marker}Carlos{marker} owns {marker}GBR-1234{marker}. [Role-DB]",
+                    evidence,
+                )
+                self.assertFailedCheck(result, "ownership_matches")
+
+    def test_inline_markdown_does_not_hide_invented_roles(self):
+        for marker in ["**", "__", "`"]:
+            with self.subTest(marker=marker):
+                result = self.verify(f"Priya owns {marker}GBR-8888{marker}. [Role-DB]")
+                self.assertFailedCheck(result, "no_invented_roles")
+
+    def test_inline_markdown_keeps_sentence_and_citation_boundaries(self):
+        evidence = {"role_tool": [role_tool("Priya"), role_tool("Carlos")]}
+        result = self.verify(
+            "**Priya owns GBR-1234.** [Role-DB] **Carlos owns ZGBR-5678.** [Role-DB]",
+            evidence,
+        )
+        self.assertEqual(result["status"], "SUCCESS")
+
+    def test_inline_markdown_keeps_unknown_citations(self):
+        result = self.verify("**Priya owns GBR-1234. [Unknown-Source]** [Role-DB]")
+        self.assertFailedCheck(result, "citations_retrieved")
 
     def test_correct_owners_in_one_sentence(self):
         evidence = {"role_tool": [role_tool("Priya"), role_tool("Carlos")]}
@@ -75,6 +119,18 @@ class VerifierTests(unittest.TestCase):
         result = self.verify(
             "Priya owns GBR-1234, not ZGBR-5678. Carlos owns ZGBR-5678. [Role-DB]", evidence)
         self.assertEqual(result["status"], "SUCCESS")
+
+    def test_inline_markdown_preserves_negated_known_roles(self):
+        evidence = {"role_tool": [role_tool("Priya"), role_tool("Carlos")]}
+        for marker in ["*", "**", "***", "_", "__", "`", "``"]:
+            with self.subTest(marker=marker):
+                result = self.verify(
+                    f"{marker}Priya{marker} owns {marker}GBR-1234{marker}, "
+                    f"not {marker}ZGBR-5678{marker}. "
+                    f"Carlos owns {marker}ZGBR-5678{marker}. [Role-DB]",
+                    evidence,
+                )
+                self.assertEqual(result["status"], "SUCCESS", result)
 
     def test_negation_does_not_hide_an_invented_role(self):
         result = self.verify("Priya owns GBR-1234, not GBR-8888. [Role-DB]")

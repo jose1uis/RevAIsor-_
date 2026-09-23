@@ -46,6 +46,8 @@ Each run shows entities, intent, graph paths/context, tool selection, raw output
 the final answer, and verification checks. This is deterministic execution
 metadata, not private model reasoning. Missing credentials produce a clear error
 and exit code 2; scope refusals need neither an API key nor tool calls.
+An exhausted API credit balance produces a billing-specific error; successful
+live generation requires an API key with available API credits.
 
 ## Offline testing
 
@@ -181,8 +183,9 @@ recreates scoped static evidence deterministically.
   Python repository. Its optional-verifier wording is superseded by the explicit
   deterministic-verifier requirement.
 - The PDF mentions a mock endpoint, but none was provided in the starter. The
-  explicit `--mock` renderer is local. No live API key was available during
-  implementation, so live synthesis and live evaluator quality remain untested.
+  explicit `--mock` renderer is local. Successful live synthesis and evaluator
+  quality validation remain pending; SDK integration and failure handling are
+  covered by the offline test suite.
 - The starter README mentions five query functions, but supplies two tool
   functions. Both concepts are preserved; unused Gemini imports are removed.
 

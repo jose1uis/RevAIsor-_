@@ -44,9 +44,22 @@ def _scoped_evidence(query: str, decision: dict) -> dict:
     return evidence
 
 
+def _plain_inline_text(text: str) -> str:
+    """Unwrap paired inline Markdown markers, retaining content and punctuation."""
+    pattern = re.compile(
+        r"(?<!\w)(?P<marker>\*{1,3}|_{1,3}|`+)(?=\S)"
+        r"(?P<content>[^\n]+?)(?<=\S)(?P=marker)(?!\w)"
+    )
+    previous = None
+    while previous != text:
+        previous = text
+        text = pattern.sub(lambda match: match.group("content"), text)
+    return text
+
+
 def _role_ids(text: str) -> set[str]:
     """Recognize known type prefixes and other numeric IDs; ignore source IDs."""
-    text = _SOURCE.sub("", text)
+    text = _SOURCE.sub("", _plain_inline_text(text))
     for document in KG["documents"]:
         text = re.sub(re.escape(document["source_id"]), "", text, flags=re.I)
     types = "|".join(re.escape(name) for name in KG["role_types"])
@@ -63,8 +76,14 @@ def _citations(response: str, known_sources: set[str]) -> set[str]:
     for source in known_sources:
         if re.search(rf"(?<!\w){re.escape(source)}(?!\w)", response, re.I):
             citations.add(source.casefold())
+    known_roles = {role.casefold() for data in KG["users"].values() for role in data["owns"]}
     for group in re.findall(r"\[([^\[\]\n]+)\]", response):
-        citations.update(part.strip().casefold() for part in re.split(r"[,;]", group))
+        # Brackets may format an actual role ID; global ID/scope checks still
+        # validate it. Other bracket tokens remain subject to citation checks.
+        citations.update(
+            part.strip().casefold() for part in re.split(r"[,;]", group)
+            if part.strip().casefold() not in known_roles
+        )
     return citations
 
 
@@ -73,6 +92,7 @@ def _wrong_ownership(response: str, users: dict) -> list[str]:
 
     This intentionally does not attempt unrestricted natural-language parsing.
     """
+    response = _plain_inline_text(response)
     errors = []
     for name, data in users.items():
         pattern = (

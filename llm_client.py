@@ -44,6 +44,21 @@ def generate_text(
             response = client.responses.create(**request)
     except APIError as exc:
         # SDK bodies may include credentials or echoed inputs; do not print them.
+        code = getattr(exc, "code", None)
+        quota_errors = {
+            "credit_balance_exhausted":
+                "OpenAI API credit balance is exhausted. Add API credits in billing before retrying.",
+            "insufficient_quota":
+                "OpenAI API quota is unavailable. Check API billing, credits, and usage limits.",
+            "organization_spend_limit_exceeded":
+                "OpenAI organization spend limit reached. Review that limit before retrying.",
+            "project_spend_limit_exceeded":
+                "OpenAI project spend limit reached. Review that limit before retrying.",
+            "organization_usage_limit_exceeded":
+                "OpenAI organization usage limit reached. Review API usage limits before retrying.",
+        }
+        if code in quota_errors:
+            raise LLMError(quota_errors[code]) from None
         status = getattr(exc, "status_code", None)
         suffix = f" (HTTP {status})" if status is not None else ""
         raise LLMError(

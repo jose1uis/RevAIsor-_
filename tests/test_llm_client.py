@@ -72,6 +72,29 @@ class LLMClientTests(unittest.TestCase):
             with self.subTest(status=status), self.assertRaises(LLMError):
                 self.call_with_transport(lambda request: httpx.Response(200, json=response_body(text, status)))
 
+    def test_exhausted_credits_have_specific_safe_guidance(self):
+        def handler(request):
+            return httpx.Response(429, headers={"x-should-retry": "false"}, json={"error": {
+                "code": "credit_balance_exhausted", "type": "insufficient_quota",
+                "message": "private server details unit-test-only",
+            }})
+        with self.assertRaises(LLMError) as error:
+            self.call_with_transport(handler)
+        self.assertIn("credit balance is exhausted", str(error.exception))
+        self.assertIn("billing", str(error.exception))
+        self.assertNotIn("private server", str(error.exception))
+        self.assertNotIn("unit-test-only", str(error.exception))
+
+    def test_temporary_rate_limit_does_not_claim_exhausted_credits(self):
+        def handler(request):
+            return httpx.Response(429, headers={"x-should-retry": "false"}, json={"error": {
+                "code": "rate_limit_exceeded", "type": "rate_limit_error", "message": "wait",
+            }})
+        with self.assertRaises(LLMError) as error:
+            self.call_with_transport(handler)
+        self.assertIn("HTTP 429", str(error.exception))
+        self.assertNotIn("credit balance is exhausted", str(error.exception))
+
     def test_missing_key_fails_before_client_creation(self):
         with patch.dict(os.environ, {}, clear=True), patch("openai.OpenAI") as client:
             with self.assertRaisesRegex(LLMError, "OPENAI_API_KEY"):
