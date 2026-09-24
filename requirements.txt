@@ -1,2 +1,2 @@
-# Python 3.10+; tests use the standard library.
+# Python 3.10+; tests use the standard library. ONLY openAI
 openai>=2.0.0,<3.0.0

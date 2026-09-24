@@ -92,6 +92,38 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(payload["tool_outputs"], result["tool_outputs"])
         self.assertIn("paths", payload["graph_context"])
 
+    def test_ownership_synthesis_cannot_see_uncalled_policy_evidence(self):
+        with patch("agent.generate_text", return_value="Priya owns GBR-1234. [Role-DB]") as generate:
+            result = agent.run_agent_detailed("What role does Priya own?")
+        payload = generate.call_args.args[1]
+        self.assertEqual(payload["allowed_citations"], ["Role-DB"])
+        self.assertNotIn("Policy-Doc-", json.dumps(payload))
+        self.assertNotIn("per-session", json.dumps(payload))
+        self.assertIn("owns", json.dumps(payload["graph_context"]["paths"]))
+        # Full graph traversal remains visible for reviewers, separate from synthesis.
+        self.assertIn("Policy-Doc-", json.dumps(result["routing"]["graph_context"]))
+
+    def test_combined_synthesis_includes_only_retrieved_policy_sources(self):
+        query = "Compare Priya's GBR role with ZGBR"
+        decision = agent.route(query)
+        outputs = agent.collect_tool_outputs(query, decision)
+        payload = agent.synthesis_payload(query, decision, outputs)
+        expected = {"Role-DB"} | {doc["source_id"] for doc in outputs["document_tool"]}
+        self.assertEqual(set(payload["allowed_citations"]), expected)
+        self.assertEqual(payload["tool_outputs"], outputs)
+        for path in payload["graph_context"]["paths"]:
+            if "documented_by" in path:
+                self.assertIn(path[-1], expected)
+
+    def test_policy_synthesis_does_not_receive_graph_user_records(self):
+        query = "What is the difference between GBR and ZGBR?"
+        decision = agent.route(query)
+        outputs = agent.collect_tool_outputs(query, decision)
+        payload = agent.synthesis_payload(query, decision, outputs)
+        self.assertNotIn("Role-DB", payload["allowed_citations"])
+        self.assertNotIn("users", payload["graph_context"])
+        self.assertNotIn("role_instances", payload["graph_context"])
+
     def test_unverified_generation_is_withheld(self):
         for candidate in ["Priya owns GBR-8888. [Role-DB]", "Priya owns GBR-1234."]:
             with self.subTest(candidate=candidate), patch("agent.generate_text", return_value=candidate):

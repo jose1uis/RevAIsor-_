@@ -8,7 +8,7 @@ from copy import deepcopy
 import re
 
 
-KG: dict = {
+KG: dict = { #dictionary
     "role_hierarchy": {
         "Role": {"parent": None},
         "Ownership Role": {"parent": "Role"},
@@ -76,7 +76,7 @@ KG: dict = {
             "keywords": ["difference", "compare", "comparison", "GBR", "ZGBR", "vs"],
         },
     ],
-    "users": {
+    "users": {   #company users
         "Priya": {
             "owns": ["GBR-1234"],
             "role_type": "GBR",

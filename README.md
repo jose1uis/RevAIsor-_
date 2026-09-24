@@ -9,7 +9,7 @@ and verifies the answer before displaying it. It never changes access.
 Requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/jose1uis/RevIAsor-_.git
+git clone https://github.com/jose1uis/RevAIsor-_.git
 cd RevIAsor-_
 python -m venv .venv
 ```
@@ -18,7 +18,7 @@ Activate with `.venv\Scripts\Activate.ps1` in PowerShell, or
 `source .venv/bin/activate` on macOS/Linux, then:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.txt #or python -m pip install --force-reinstall --no-cache-dir -r requirements.txt
 ```
 
 For live synthesis, set an API key in your shell. PowerShell:
@@ -84,7 +84,9 @@ three users, their ownership/review records, and three sourced policy documents.
 Role-instance nodes are derived from ownership, including Fatima's mixed roles.
 The graph walk follows user ownership, role type, parent hierarchy, and policy
 source edges; its paths are visible in the CLI. Tools return copies from this
-single data source. A dictionary is sufficient for this small static dataset;
+single data source. Synthesis receives structural graph paths and only evidence
+returned by selected tools, with an explicit citation allowlist. A dictionary is
+sufficient for this small static dataset;
 a larger production system could use a dedicated graph database.
 
 ### Routing strategy
@@ -183,9 +185,11 @@ recreates scoped static evidence deterministically.
   Python repository. Its optional-verifier wording is superseded by the explicit
   deterministic-verifier requirement.
 - The PDF mentions a mock endpoint, but none was provided in the starter. The
-  explicit `--mock` renderer is local. Successful live synthesis and evaluator
-  quality validation remain pending; SDK integration and failure handling are
-  covered by the offline test suite.
+  explicit `--mock` renderer is local. Live comparison synthesis and its independent
+  evaluator passed; history synthesis also ran. Live testing exposed unsolicited
+  graph-policy citations in an ownership answer, which was withheld. Synthesis
+  context now excludes uncalled policy evidence. The complete live suite after
+  that correction remains pending; regression tests cover the evidence boundary.
 - The starter README mentions five query functions, but supplies two tool
   functions. Both concepts are preserved; unused Gemini imports are removed.
 
