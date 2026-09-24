@@ -10,7 +10,7 @@ Requires Python 3.10 or newer.
 
 ```bash
 git clone https://github.com/jose1uis/RevAIsor-_.git
-cd RevIAsor-_
+cd RevAIsor-_
 python -m venv .venv
 ```
 
@@ -145,7 +145,7 @@ python evaluator.py --result-file run.json
 ## Files
 
 ```text
-RevIAsor-_/
+RevAIsor-_/
 |-- README.md
 |-- agent.py             # CLI, synthesis, verification gate
 |-- router.py            # deterministic routing
